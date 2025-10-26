@@ -23,7 +23,7 @@ def start_message(message):
 def chat_with_ai(message):
     try:
         completion = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4o-mini",
             messages=[{"role": "user", "content": message.text}]
         )
         answer = completion.choices[0].message.content
