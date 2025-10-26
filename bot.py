@@ -12,24 +12,36 @@ if not TELEGRAM_TOKEN or not OPENAI_API_KEY:
     print("- OPENAI_API_KEY")
     exit(1)
 
+BOT_NAMES = ["джамшут", "джамш", "джамшутик"]
+
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 client = OpenAI(api_key=OPENAI_API_KEY)
 
-@bot.message_handler(commands=['start'])
-def start_message(message):
-    bot.reply_to(message, "Привет! Я енот-ИИ, вершина эволюции 🦝💡")
+def generate_response(user_message):
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": (
+                "Ты саркастичный бот Джамшут — философ и юморист. "
+                "Отвечай дерзко, иронично, с умными колкостями, но не оскорбляй пользователей."
+            )},
+            {"role": "user", "content": user_message}
+        ]
+    )
+    return completion.choices[0].message.content
 
-@bot.message_handler(func=lambda msg: True)
-def chat_with_ai(message):
-    try:
-        completion = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": message.text}]
-        )
-        answer = completion.choices[0].message.content
-        bot.reply_to(message, answer)
-    except Exception as e:
-        bot.reply_to(message, f"Ошибка: {e}")
+def is_mentioned(message_text):
+    text_lower = message_text.lower()
+    for name in BOT_NAMES:
+        if name in text_lower:
+            return True
+    return False
 
-print("🦝 Бот запущен и готов к работе!")
-bot.polling()
+@bot.message_handler(func=lambda m: True)
+def handle_group_message(message):
+    if message.text and is_mentioned(message.text):
+        response = generate_response(message.text)
+        bot.reply_to(message, response)
+
+print("🤖 Джамшут запущен и готов философствовать!")
+bot.polling(none_stop=True)
