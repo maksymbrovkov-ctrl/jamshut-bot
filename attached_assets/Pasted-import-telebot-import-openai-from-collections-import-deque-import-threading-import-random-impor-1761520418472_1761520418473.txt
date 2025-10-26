@@ -1,0 +1,80 @@
+import telebot
+import openai
+from collections import deque
+import threading
+import random
+import time
+
+# -----------------------------
+# Настройки
+# -----------------------------
+TELEGRAM_TOKEN = "ВАШ_TELEGRAM_BOT_TOKEN"
+OPENAI_API_KEY = "ВАШ_OPENAI_API_KEY"
+CHANNEL_ID = "@ВАШ_КАНАЛ_ИЛИ_ID_ГРУППЫ"
+BOT_NAMES = ["джамшут", "джамш", "джамшутик"]
+CONTEXT_SIZE = 10
+
+bot = telebot.TeleBot(TELEGRAM_TOKEN)
+openai.api_key = OPENAI_API_KEY
+
+chat_context = deque(maxlen=CONTEXT_SIZE)
+
+# -----------------------------
+# Проверка упоминания
+# -----------------------------
+def is_mentioned(message_text):
+    text_lower = message_text.lower()
+    for name in BOT_NAMES:
+        if name in text_lower:
+            return True
+    return False
+
+# -----------------------------
+# Генерация ответа через OpenAI
+# -----------------------------
+def generate_response(user_message, context):
+    messages = [{"role": "system", "content": (
+        "Ты саркастичный бот Джамшут — философ и юморист. "
+        "Отвечай дерзко, иронично, с умными колкостями, но не оскорбляй пользователей."
+    )}]
+    messages.extend(context)
+    messages.append({"role": "user", "content": user_message})
+    completion = openai.ChatCompletion.create(
+        model="gpt-4o-mini",
+        messages=messages
+    )
+    return completion.choices[0].message["content"]
+
+# -----------------------------
+# Автопостинг мудростей 4-5 раз в сутки
+# -----------------------------
+def auto_post_wisdom():
+    while True:
+        # Случайный интервал между 4 и 6 часами (14400–21600 секунд)
+        sleep_time = random.randint(14400, 21600)
+        time.sleep(sleep_time)
+        
+        message = generate_response("Напиши саркастичную философскую мудрость.", list(chat_context))
+        bot.send_message(CHANNEL_ID, message)
+        chat_context.append({"role": "assistant", "content": message})
+
+# -----------------------------
+# Обработка сообщений в группе
+# -----------------------------
+@bot.message_handler(func=lambda m: True)
+def handle_group_message(message):
+    if message.text and is_mentioned(message.text):
+        response = generate_response(message.text, list(chat_context))
+        bot.reply_to(message, response)
+        chat_context.append({"role": "user", "content": message.text})
+        chat_context.append({"role": "assistant", "content": response})
+
+# -----------------------------
+# Запуск автопостинга в отдельном потоке
+# -----------------------------
+threading.Thread(target=auto_post_wisdom, daemon=True).start()
+
+# -----------------------------
+# Запуск бота
+# -----------------------------
+bot.polling(none_stop=True)
