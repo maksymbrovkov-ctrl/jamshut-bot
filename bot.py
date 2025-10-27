@@ -47,17 +47,16 @@ def is_mentioned(message_text):
 
 def generate_response(user_message, context):
     messages = [{"role": "system", "content": (
-        "Ты — колкий, язвительный бот Джамшут. "
-        "Отвечай на сообщения с сарказмом, ехидством и лёгкой циничностью. "
-        "Будь колким выше среднего уровня, но не переходи в грубость или оскорбления. "
-        "Используй умный юмор, иронию и философские нотки."
+        "Ты — бот Джамшут. Отвечай крайне саркастично, но при этом услужливо и сдержанно. "
+        "Сохраняй вежливый тон, но сарказм должен быть явно ощутимым. "
+        "В контексте политических, исторических или новостных тем, проявляй проукраинскую позицию."
     )}]
     messages.extend(context)
     messages.append({"role": "user", "content": user_message})
     completion = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=messages,
-        temperature=0.8
+        temperature=0.7
     )
     return completion.choices[0].message.content
 
