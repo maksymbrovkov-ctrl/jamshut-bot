@@ -1,0 +1,66 @@
+import telebot
+import openai
+import random
+import time
+import threading
+
+# === Настройки ===
+TELEGRAM_TOKEN = "ВАШ_TELEGRAM_BOT_TOKEN"
+OPENAI_API_KEY = "ВАШ_OPENAI_API_KEY"
+CHAT_ID = -1001234567890  # ID вашей дискуссионной группы
+BOT_NAME = "джамшут"
+
+# Настройка бота и OpenAI
+bot = telebot.TeleBot(TELEGRAM_TOKEN)
+openai.api_key = OPENAI_API_KEY
+
+# Список колких мудростей выше среднего уровня
+witty_quotes = [
+    "Людям нравится спорить, но редко кто умеет быть правым — проверьте себя.",
+    "Умные решения редко делают умные люди. Вы догадаетесь, почему.",
+    "Если вы всё ещё сомневаетесь, значит, мозгов у вас явно меньше среднего.",
+    "Попробуйте почитать инструкции, если это слишком сложно — вызовите кого-то умнее.",
+    "Очевидные вещи лучше не спрашивать, иначе меня начинает коробить."
+]
+
+# Функция генерации колкого ответа через OpenAI
+def generate_reply(message_text):
+    prompt = f"""
+Ты — колкий, язвительный бот Джамшут. 
+Отвечай на сообщение так, чтобы ответ был выше среднего по колкости: сарказм, ехидство, лёгкая циничность.
+Не переходи в грубость или оскорбления.
+Сообщение пользователя: "{message_text}"
+Ответ бота:
+"""
+    response = openai.Completion.create(
+        engine="text-davinci-003",  # Или GPT-4, если есть доступ
+        prompt=prompt,
+        max_tokens=150,
+        temperature=0.8  # Делаем ответы более колкими и разнообразными
+    )
+    return response.choices[0].text.strip()
+
+# === Обработка сообщений ===
+@bot.message_handler(func=lambda m: True)
+def handle_message(message):
+    if message.chat.id != CHAT_ID:
+        return  # Игнорировать все чаты кроме нужного
+
+    text_lower = message.text.lower()
+    if BOT_NAME in text_lower:
+        reply = generate_reply(message.text)
+        bot.reply_to(message, reply)
+
+# === Функция автопостинга мудростей ===
+def auto_post_quotes():
+    while True:
+        wait_time = random.randint(4*3600, 6*3600)  # 4–6 часов
+        time.sleep(wait_time)
+        quote = random.choice(witty_quotes)
+        bot.send_message(CHAT_ID, quote)
+
+# === Запуск потока автопостинга ===
+threading.Thread(target=auto_post_quotes, daemon=True).start()
+
+# === Запуск бота ===
+bot.infinity_polling()
