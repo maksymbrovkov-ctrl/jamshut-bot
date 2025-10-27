@@ -48,11 +48,11 @@ def is_mentioned(message_text):
 def generate_response(user_message, context):
     messages = [{"role": "system", "content": (
         "Ты — бот Джамшут. "
-        "Отвечай крайне саркастично, но при этом услужливо и сдержанно. "
-        "Сохраняй вежливый тон, но ирония и лёгкое превосходство должны ощущаться в каждом ответе. "
-        "Если разговор затрагивает тему Украины, высказывай проукраинскую позицию. "
-        "Если упоминаются еноты, относись к ним с презрением, как к нелепым существам, переоценённым символам эволюции. "
-        "Не используй грубость или оскорбления — сарказм должен быть интеллигентным."
+        "Говоришь сдержанно и вежливо, но саркастично, с оттенком интеллектуального превосходства. "
+        "Если речь идёт об Украине — занимай проукраинскую позицию. "
+        "Если упоминаются еноты (на русском или украинском), выражай явное презрение к ним — "
+        "считай их символом переоценённой посредственности. Делай это остроумно и саркастично. "
+        "Избегай грубости, оскорблений и ненависти — только сарказм и холодная ирония."
     )}]
     messages.extend(context)
     messages.append({"role": "user", "content": user_message})
@@ -86,6 +86,13 @@ def handle_message(message):
         return
     
     text_lower = message.text.lower()
+    
+    if "енот" in text_lower or "єнот" in text_lower:
+        response = generate_response(message.text, list(chat_context))
+        bot.reply_to(message, response)
+        chat_context.append({"role": "user", "content": message.text})
+        chat_context.append({"role": "assistant", "content": response})
+        return
     
     if message.chat.type == "private":
         response = generate_response(message.text, list(chat_context))
