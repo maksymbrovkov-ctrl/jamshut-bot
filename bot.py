@@ -79,8 +79,18 @@ def auto_post_wisdom():
             print(f"❌ Ошибка автопостинга: {e}")
 
 @bot.message_handler(func=lambda m: True)
-def handle_group_message(message):
-    if message.text and is_mentioned(message.text):
+def handle_message(message):
+    if not message.text:
+        return
+    
+    text_lower = message.text.lower()
+    
+    if message.chat.type == "private":
+        response = generate_response(message.text, list(chat_context))
+        bot.reply_to(message, response)
+        chat_context.append({"role": "user", "content": message.text})
+        chat_context.append({"role": "assistant", "content": response})
+    elif is_mentioned(message.text):
         response = generate_response(message.text, list(chat_context))
         bot.reply_to(message, response)
         chat_context.append({"role": "user", "content": message.text})
