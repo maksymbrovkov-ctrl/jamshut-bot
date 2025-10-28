@@ -260,13 +260,29 @@ save_last_run(list(chat_contexts.keys()))
 bot.polling(none_stop=True)
 
 import threading
-from http.server import SimpleHTTPRequestHandler, HTTPServer
-import os
+import telebot
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+# --- твой код бота выше ---
+# bot.polling(...) и т.д.
+
+# Фейковый HTTP-сервер, чтобы Render думал, что это Web Service
+class PingHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-type", "text/plain; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(b"Bot is alive")
 
 def run_server():
-    port = int(os.environ.get("PORT", 10000))
-    server = HTTPServer(("0.0.0.0", port), SimpleHTTPRequestHandler)
-    print(f"🌍 Фейковый веб-сервер запущен на порту {port}")
+    port = 10000  # Render сам подставит порт, если надо
+    server = HTTPServer(("0.0.0.0", port), PingHandler)
+    print(f"🌍 Fake web server running on port {port}")
     server.serve_forever()
 
+# Запускаем сервер в отдельном потоке
 threading.Thread(target=run_server, daemon=True).start()
+
+# Запуск Telegram polling
+print("🤖 Starting bot polling...")
+bot.polling(none_stop=True, interval=0, timeout=60)
