@@ -260,11 +260,10 @@ save_last_run(list(chat_contexts.keys()))
 bot.polling(none_stop=True)
 
 import threading
-import os
 from http.server import SimpleHTTPRequestHandler, HTTPServer
+import os
 
 def run_server():
-    # Render автоматически подставит свой порт через переменную окружения PORT
     port = int(os.environ.get("PORT", 10000))
     server = HTTPServer(("0.0.0.0", port), SimpleHTTPRequestHandler)
     print(f"🌍 Фейковый веб-сервер запущен на порту {port}")
