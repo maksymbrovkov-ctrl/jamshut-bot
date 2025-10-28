@@ -253,18 +253,13 @@ else:
     print("🔹 Первый запуск, уведомления не требуются")
 
 
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
 # === 🚀 Запуск ===
 threading.Thread(target=auto_post_wisdom, daemon=True).start()
 print("🤖 Джамшут запущен и готов философствовать!")
 save_last_run(list(chat_contexts.keys()))
-bot.polling(none_stop=True)
-
-import threading
-import telebot
-from http.server import BaseHTTPRequestHandler, HTTPServer
-
-# --- твой код бота выше ---
-# bot.polling(...) и т.д.
 
 # Фейковый HTTP-сервер, чтобы Render думал, что это Web Service
 class PingHandler(BaseHTTPRequestHandler):
@@ -275,7 +270,7 @@ class PingHandler(BaseHTTPRequestHandler):
         self.wfile.write(b"Bot is alive")
 
 def run_server():
-    port = 10000  # Render сам подставит порт, если надо
+    port = 10000
     server = HTTPServer(("0.0.0.0", port), PingHandler)
     print(f"🌍 Fake web server running on port {port}")
     server.serve_forever()
@@ -283,6 +278,5 @@ def run_server():
 # Запускаем сервер в отдельном потоке
 threading.Thread(target=run_server, daemon=True).start()
 
-# Запуск Telegram polling
-print("🤖 Starting bot polling...")
+# Запускаем бота (только один раз!)
 bot.polling(none_stop=True, interval=0, timeout=60)
