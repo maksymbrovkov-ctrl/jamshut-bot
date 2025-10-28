@@ -252,8 +252,20 @@ if last_run["timestamp"]:
 else:
     print("🔹 Первый запуск, уведомления не требуются")
 
+
 # === 🚀 Запуск ===
 threading.Thread(target=auto_post_wisdom, daemon=True).start()
 print("🤖 Джамшут запущен и готов философствовать!")
 save_last_run(list(chat_contexts.keys()))
 bot.polling(none_stop=True)
+
+import threading
+from http.server import SimpleHTTPRequestHandler, HTTPServer
+
+def run_server():
+    port = 10000
+    server = HTTPServer(('0.0.0.0', port), SimpleHTTPRequestHandler)
+    print(f"🌍 Фейковый веб-сервер запущен на порту {port}")
+    server.serve_forever()
+
+threading.Thread(target=run_server, daemon=True).start()
