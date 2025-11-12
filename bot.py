@@ -833,7 +833,10 @@ def summarize_chat(message):
     chat_id = message.chat.id
     context = chat_contexts.get(chat_id)
     if not context:
-        bot.reply_to(message, "Пока нечего резюмировать.")
+        try:
+            bot.reply_to(message, "Пока нечего резюмировать.")
+        except:
+            bot.send_message(chat_id, "Пока нечего резюмировать.")
         return
 
     recent_messages = list(context)[-200:]
@@ -841,7 +844,10 @@ def summarize_chat(message):
                            if m.get("role") == "user")
 
     if not text_block:
-        bot.reply_to(message, "Пока нечего резюмировать.")
+        try:
+            bot.reply_to(message, "Пока нечего резюмировать.")
+        except:
+            bot.send_message(chat_id, "Пока нечего резюмировать.")
         return
 
     if len(text_block) > 8000:
@@ -856,9 +862,15 @@ def summarize_chat(message):
     try:
         summary = generate_response(summary_prompt + "\n\n" + text_block, [],
                                     user_id=None)
-        bot.reply_to(message, f"🧠 {summary}")
+        try:
+            bot.reply_to(message, f"🧠 {summary}")
+        except:
+            bot.send_message(chat_id, f"🧠 {summary}")
     except Exception:
-        bot.reply_to(message, "Что-то пошло не так, попробуй позже.")
+        try:
+            bot.reply_to(message, "Что-то пошло не так, попробуй позже.")
+        except:
+            bot.send_message(chat_id, "Что-то пошло не так, попробуй позже.")
         print("⚠️ Ошибка при создании резюме:", traceback.format_exc())
 
 
@@ -885,17 +897,13 @@ def show_profile(message):
             parts = message.text.split()
             if len(parts) > 1:
                 arg = parts[1].strip()
-                # убираем возможные скобки/слеши
                 arg = arg.rstrip('/').lstrip()
-                # если t.me ссылка
                 if "t.me/" in arg:
                     arg = arg.split("t.me/")[-1].strip()
-                # если @username
                 if arg.startswith("@"):
                     name_to_find = arg.lstrip("@").lower()
                     with usernames_lock:
                         for uid, data in usernames_seen.items():
-                            # data может быть {"id":..., "name":...}
                             dname = (data.get("name") or "").lower()
                             if dname == name_to_find or (
                                     getattr(data, "get", None)
@@ -904,7 +912,6 @@ def show_profile(message):
                                 target_uid = int(uid)
                                 target_name = data.get("name") or arg
                                 break
-                # если numeric id
                 if not target_uid and re.fullmatch(r"\d{5,}", arg):
                     try:
                         candidate = int(arg)
@@ -923,12 +930,17 @@ def show_profile(message):
             target_name = target_name.strip() or getattr(
                 user, "username", None) or f"User_{target_uid}"
 
-        # Получаем профиль и отвечаем
         profile = get_user_profile_text(target_uid, target_name)
-        bot.reply_to(message, profile)
+        try:
+            bot.reply_to(message, profile)
+        except:
+            bot.send_message(message.chat.id, profile)
 
     except Exception:
-        bot.reply_to(message, "Не могу показать профиль сейчас.")
+        try:
+            bot.reply_to(message, "Не могу показать профиль сейчас.")
+        except:
+            bot.send_message(message.chat.id, "Не могу показать профиль сейчас.")
         print("⚠️ Ошибка в /профиль:", traceback.format_exc())
 
 
@@ -946,11 +958,8 @@ def handle_message(message):
 
     # 0️⃣ — Проверяем допустимость источника
     if message.chat.type == "private" and message.from_user.id != ADMIN_ID:
-        # Игнорируем личку с другими пользователями
         return
-    if message.chat.type in ["group", "supergroup"
-                             ] and message.chat.id not in ALLOWED_CHAT_IDS:
-        # Игнорируем все другие группы
+    if message.chat.type in ["group", "supergroup"] and message.chat.id not in ALLOWED_CHAT_IDS:
         return
 
     # 1️⃣ — Проверяем, что сообщение текстовое и не пустое
@@ -960,32 +969,25 @@ def handle_message(message):
     text = message.text.strip()
     text_lower = text.lower()
 
-    # Игнорируем чистые эмодзи, смайлы и стикеры
     if not re.search(r"[a-zA-Zа-яА-ЯёЁіІїЇєЄ]", text):
         return
 
-    # 2️⃣ — Отбрасываем старые сообщения
-    if abs(time.time() -
-           getattr(message, "date", time.time())) > MESSAGE_TIME_WINDOW:
+    if abs(time.time() - getattr(message, "date", time.time())) > MESSAGE_TIME_WINDOW:
         return
 
     # 3️⃣ — Сохраняем имя пользователя
     try:
         user = message.from_user
         if user:
-            name = user.first_name or getattr(user, "username",
-                                              None) or "друг мой"
+            name = user.first_name or getattr(user, "username", None) or "друг мой"
             if getattr(user, "last_name", None):
                 name = f"{name} {user.last_name}"
 
             with usernames_lock:
                 usernames_seen[int(user.id)] = {
-                    "id":
-                    int(user.id),
-                    "name":
-                    ((user.first_name or "") +
-                     ((" " +
-                       user.last_name) if user.last_name else "")).strip()
+                    "id": int(user.id),
+                    "name": ((user.first_name or "") +
+                             ((" " + user.last_name) if user.last_name else "")).strip()
                     or (user.username or f"User_{user.id}")
                 }
 
@@ -995,12 +997,9 @@ def handle_message(message):
 
     chat_id = message.chat.id
 
-    # 4️⃣ — Проверка на запрос резюме ("джам, подведи итог")
-    summary_keywords = ("резюме", "итог", "обзор", "сводк", "подведи",
-                        "изложен")
+    summary_keywords = ("резюме", "итог", "обзор", "сводк", "подведи", "изложен")
 
-    if any(k in text_lower
-           for k in summary_keywords) and is_mentioned(text_lower):
+    if any(k in text_lower for k in summary_keywords) and is_mentioned(text_lower):
         if len(text_lower.split()) < 3:
             print(f"⚠️ Игнорирую короткий запрос резюме: {text_lower}")
             return
@@ -1009,54 +1008,44 @@ def handle_message(message):
             match = re.search(
                 r"\b(?:резюме|сводк|итог|обзор|подведи(?:\s+итог)?|изложен)\b.*?(\d+)?",
                 text_lower)
-
-            num_messages = int(
-                match.group(1)) if match and match.group(1) else 100
+            num_messages = int(match.group(1)) if match and match.group(1) else 100
             num_messages = max(10, min(num_messages, 300))
-
             summary = summarize_dynamic(chat_id, num_messages)
-            bot.reply_to(message,
-                         f"🧠 {summary or 'Пока нечего резюмировать.'}")
-
+            try:
+                bot.reply_to(message, f"🧠 {summary or 'Пока нечего резюмировать.'}")
+            except:
+                bot.send_message(chat_id, f"🧠 {summary or 'Пока нечего резюмировать.'}")
         except Exception:
-            bot.reply_to(message, "Что-то пошло не так при создании резюме.")
+            try:
+                bot.reply_to(message, "Что-то пошло не так при создании резюме.")
+            except:
+                bot.send_message(chat_id, "Что-то пошло не так при создании резюме.")
             print("⚠️ Ошибка в обработке резюме:", traceback.format_exc())
         return
 
-    # 5️⃣ — Подготовка контекста
     context = chat_contexts.setdefault(chat_id, deque(maxlen=200))
     context.append({"role": "user", "content": text})
 
-    # 6️⃣ — Логика принятия решения, отвечать или нет
     try:
-        # Используем глобальный username, если уже есть
         BOT_USERNAME = BOT_USERNAME_GLOBAL
     except NameError:
-        # Безопасно получаем username при первом запуске
         BOT_USERNAME = (getattr(bot.get_me(), "username", "") or "").lower()
         BOT_USERNAME_GLOBAL = BOT_USERNAME
 
-    # Проверяем, был ли ответ на сообщение бота
-    reply_from = getattr(getattr(message, "reply_to_message", None),
-                         "from_user", None)
-    reply_to_bot = (reply_from and (getattr(reply_from, "username", "")
-                                    or "").lower() == BOT_USERNAME)
+    reply_from = getattr(getattr(message, "reply_to_message", None), "from_user", None)
+    reply_to_bot = (reply_from and (getattr(reply_from, "username", "") or "").lower() == BOT_USERNAME)
 
     should_reply = (is_mentioned(text_lower) or reply_to_bot
-                    or (message.chat.type == "private"
-                        and message.from_user.id == ADMIN_ID)
-                    or (message.chat.type in ["group", "supergroup"]
-                        and random.random() < 0.01))
+                    or (message.chat.type == "private" and message.from_user.id == ADMIN_ID)
+                    or (message.chat.type in ["group", "supergroup"] and random.random() < 0.01))
 
     if not should_reply:
         return
 
-    # 7️⃣ — Генерация и отправка ответа
     try:
         uid = int(message.from_user.id)
         uname = (((message.from_user.first_name or "") +
-                  ((" " + message.from_user.last_name)
-                   if message.from_user.last_name else "")).strip()
+                  ((" " + message.from_user.last_name) if message.from_user.last_name else "")).strip()
                  or getattr(message.from_user, "username", None)
                  or f"User_{uid}")
 
@@ -1064,20 +1053,23 @@ def handle_message(message):
         if not context_list:
             context_list = [{"role": "system", "content": "Начало диалога."}]
 
-        response = generate_response(text,
-                                     context_list,
-                                     user_id=uid,
-                                     username=uname)
+        response = generate_response(text, context_list, user_id=uid, username=uname)
         styled_response = response
 
-        bot.reply_to(message, styled_response)
+        try:
+            bot.reply_to(message, styled_response)
+        except:
+            bot.send_message(chat_id, styled_response)
         context.append({"role": "assistant", "content": styled_response})
 
     except Exception:
-        bot.reply_to(message, "Что-то пошло не так, попробуй позже.")
+        try:
+            bot.reply_to(message, "Что-то пошло не так, попробуй позже.")
+        except:
+            bot.send_message(chat_id, "Что-то пошло не так, попробуй позже.")
         print("⚠️ Ошибка при генерации ответа:", traceback.format_exc())
 
-    # === Мониторинг состояния polling ===
+   # === Мониторинг состояния polling ===
     bot_alive = True
 
 
