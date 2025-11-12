@@ -13,7 +13,6 @@ from datetime import datetime, timezone, timedelta
 import signal
 import sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from duckduckgo_search import DDGS
 
 # === 🧠 Конфиги и файлы ===
 CONTEXT_FILE = "contexts.json"
